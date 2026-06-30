@@ -262,11 +262,12 @@ a {
 }
 
 .search-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid currentColor;
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  border: 1.6px solid currentColor;
   border-radius: 999px;
   font-size: 0;
   opacity: .85;
@@ -274,11 +275,15 @@ a {
 
 .search-icon::after {
   content: "";
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
   width: 7px;
-  height: 1.5px;
+  height: 1.6px;
   border-radius: 999px;
   background: currentColor;
-  transform: translate(7px, 7px) rotate(45deg);
+  transform: rotate(45deg);
+  transform-origin: left center;
 }
 
 .search-box span,

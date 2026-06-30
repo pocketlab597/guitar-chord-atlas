@@ -15,7 +15,6 @@ const TYPE_ORDER = ["maj", "min", "7", "maj7", "m7", "mMaj7", "m7b5", "dim", "di
 const ROOT_BASES = ["C", "D", "E", "F", "G", "A", "B"];
 const ROOT_ACCIDENTALS = [
   { id: "flat", label: "♭" },
-  { id: "natural", label: "♮" },
   { id: "sharp", label: "♯" }
 ];
 const ROOT_NAME_MAP = {
@@ -120,6 +119,8 @@ const COMMON_CHORDS = [
 const state = {
   screen: "lookup",
   root: "C",
+  rootInputBase: "C",
+  rootInputAccidental: null,
   type: "maj",
   shapeIndex: 0,
   key: "C",
@@ -172,7 +173,7 @@ function renderTypeControls() {
   mobile.className = "mobile-type-picker";
   const mobileRow = document.createElement("div");
   mobileRow.className = "chip-row";
-  mobileRow.append(...MOBILE_PRIMARY_TYPES.map(type => chip(typeLabelShort(type), () => setChord(state.root, type), `type-${type}`, TYPES[type].label)));
+  mobileRow.append(...MOBILE_PRIMARY_TYPES.map(type => chip(typeLabelShort(type), () => setChord(state.root, type, { keepRootInput: true }), `type-${type}`, TYPES[type].label)));
   const toggle = document.createElement("button");
   toggle.className = "more-types";
   toggle.id = "typeMoreToggle";
@@ -193,7 +194,7 @@ function renderTypeControls() {
     label.textContent = group.label;
     const row = document.createElement("div");
     row.className = "chip-row";
-    row.append(...group.types.map(type => chip(typeLabelShort(type), () => setChord(state.root, type), `type-${type}`, TYPES[type].label)));
+    row.append(...group.types.map(type => chip(typeLabelShort(type), () => setChord(state.root, type, { keepRootInput: true }), `type-${type}`, TYPES[type].label)));
     wrap.append(label, row);
     return wrap;
   }));
@@ -251,6 +252,7 @@ function setChord(root, type, options = {}) {
   state.root = root;
   state.type = type;
   state.shapeIndex = 0;
+  if (!options.keepRootInput) syncRootInput(root);
   if (!options.keepSearch) $("#chordSearch").value = chordName(root, type);
   saveRecent(root, type);
   renderLookup();
@@ -262,15 +264,24 @@ function setChord(root, type, options = {}) {
 }
 
 function selectRootBase(base) {
-  const current = rootSelectionFromName(state.root);
-  const nextAccidental = ROOT_NAME_MAP[base]?.[current.accidental] ? current.accidental : "natural";
-  setChord(ROOT_NAME_MAP[base][nextAccidental], state.type);
+  state.rootInputBase = base;
+  state.rootInputAccidental = null;
+  setChord(ROOT_NAME_MAP[base].natural, state.type, { keepRootInput: true });
 }
 
 function selectRootAccidental(accidental) {
-  const current = rootSelectionFromName(state.root);
-  const nextRoot = ROOT_NAME_MAP[current.base]?.[accidental];
-  if (nextRoot) setChord(nextRoot, state.type);
+  const base = state.rootInputBase || rootSelectionFromName(state.root).base;
+  const nextRoot = ROOT_NAME_MAP[base]?.[accidental];
+  if (!nextRoot) return;
+  state.rootInputBase = base;
+  state.rootInputAccidental = accidental;
+  setChord(nextRoot, state.type, { keepRootInput: true });
+}
+
+function syncRootInput(root) {
+  const rootSelection = rootSelectionFromName(root);
+  state.rootInputBase = rootSelection.base;
+  state.rootInputAccidental = rootSelection.accidental === "natural" ? null : rootSelection.accidental;
 }
 
 function rootSelectionFromName(root) {
@@ -304,12 +315,12 @@ function renderAll() {
 }
 
 function renderLookup() {
-  const rootSelection = rootSelectionFromName(state.root);
-  document.querySelectorAll("[data-root-base]").forEach(button => button.classList.toggle("active", button.dataset.rootBase === rootSelection.base));
+  const rootInputBase = state.rootInputBase || rootSelectionFromName(state.root).base;
+  document.querySelectorAll("[data-root-base]").forEach(button => button.classList.toggle("active", button.dataset.rootBase === rootInputBase));
   document.querySelectorAll("[data-accidental]").forEach(button => {
-    const nextRoot = ROOT_NAME_MAP[rootSelection.base]?.[button.dataset.accidental];
+    const nextRoot = ROOT_NAME_MAP[rootInputBase]?.[button.dataset.accidental];
     button.disabled = !nextRoot;
-    button.classList.toggle("active", button.dataset.accidental === rootSelection.accidental);
+    button.classList.toggle("active", button.dataset.accidental === state.rootInputAccidental);
   });
   document.querySelectorAll("#typeGroups .chip").forEach(button => button.classList.toggle("active", button.dataset.id === `type-${state.type}`));
   document.querySelectorAll(".mobile-type-picker .chip").forEach(button => button.classList.toggle("active", button.dataset.id === `type-${state.type}`));
