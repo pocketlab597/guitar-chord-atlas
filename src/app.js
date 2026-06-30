@@ -14,7 +14,7 @@ const FINGER_NAMES = ["", "人", "中", "薬", "小"];
 const TYPE_ORDER = ["maj", "min", "7", "maj7", "m7", "mMaj7", "m7b5", "dim", "dim7", "aug", "augMaj7", "6", "m6", "9", "m9", "sus2", "sus4", "7sus4", "add9"];
 // 種類セレクタは塊で見せて走査負荷を下げる（小見出し + チップ行）
 const TYPE_GROUPS = [
-  { label: "よく使う", types: ["maj", "min", "7", "m7", "maj7"] },
+  { label: "よく使う", types: ["min", "7", "m7", "maj7"] },
   { label: "セブンス・6th", types: ["m7b5", "mMaj7", "dim7", "6", "m6", "7sus4"] },
   { label: "テンション", types: ["9", "m9", "add9"] },
   { label: "sus・aug・dim", types: ["sus2", "sus4", "dim", "aug", "augMaj7"] }
@@ -625,7 +625,7 @@ function movableTemplates(type) {
     dim: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 2, 1, -1], fingers: [0, 1, 2, 4, 3, 0] }],
     dim7: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 2, 1, -1], fingers: [0, 1, 2, 4, 3, 0] }],
     aug: [
-      { label: "6弦ルート", rootString: 6, rel: [0, 3, 2, 1, 1, 0], fingers: [1, 4, 3, 2, 2, 1] },
+      { label: "6弦ルート", rootString: 6, rel: [0, 3, 2, 1, 1, 0], fingers: [0, 4, 3, 1, 2, 0] },
       { label: "5弦ルート", rootString: 5, rel: [-1, 0, 3, 2, 2, 1], fingers: [0, 1, 4, 2, 3, 1] }
     ],
     6: [
