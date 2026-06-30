@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="ギター練習中にコードフォーム、キーの中のコード、音名からのコード判定をすぐ確認できる練習補助ツール。">
+  <meta name="description" content="ギター練習中にコードフォーム、ダイアトニックコード、音名からのコード判定をすぐ確認できる練習補助ツール。">
   <meta name="theme-color" content="#f4f6f9">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';">
   <title>Chord Atlas - ギターコード練習ツール</title>
@@ -29,7 +29,7 @@
 
       <nav class="header-tabs" aria-label="機能切り替え">
         <a class="header-tab active" href="#lookup" data-nav="lookup">押さえ方</a>
-        <a class="header-tab" href="#key" data-nav="key">キー</a>
+        <a class="header-tab" href="#key" data-nav="key">ダイアトニック</a>
         <a class="header-tab" href="#identify" data-nav="identify">判定</a>
         <a class="header-tab" href="#stock" data-nav="stock">ストック<span class="tab-badge" data-stock-badge hidden></span></a>
       </nav>
@@ -69,8 +69,8 @@
 
       <section class="screen" id="keyScreen" aria-labelledby="keyTitle">
         <div class="pane-head">
-          <h1 id="keyTitle" class="pane-title">キーの中のコード</h1>
-          <p class="pane-hint">キーを選ぶと、その中で使えるコードと押さえ方が一覧で並びます。</p>
+          <h1 id="keyTitle" class="pane-title">ダイアトニックコード</h1>
+          <p class="pane-hint">選んだキーのI〜vii°を、三和音・四和音とフォームで確認できます。</p>
         </div>
 
         <div class="key-controls">
@@ -128,7 +128,7 @@
         <b>押さえ方</b>
       </a>
       <a class="nav-item" href="#key" data-nav="key">
-        <b>キー</b>
+        <b>ダイアトニック</b>
       </a>
       <a class="nav-item" href="#identify" data-nav="identify">
         <b>判定</b>
