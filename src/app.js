@@ -12,6 +12,22 @@ const DEGREE_LABELS = {
 };
 const FINGER_NAMES = ["", "人", "中", "薬", "小"];
 const TYPE_ORDER = ["maj", "min", "7", "maj7", "m7", "mMaj7", "m7b5", "dim", "dim7", "aug", "augMaj7", "6", "m6", "9", "m9", "sus2", "sus4", "7sus4", "add9"];
+const ROOT_BASES = ["C", "D", "E", "F", "G", "A", "B"];
+const ROOT_ACCIDENTALS = [
+  { id: "flat", label: "♭" },
+  { id: "natural", label: "♮" },
+  { id: "sharp", label: "♯" }
+];
+const ROOT_NAME_MAP = {
+  C: { natural: "C", sharp: "C#" },
+  D: { natural: "D" },
+  E: { flat: "Eb", natural: "E" },
+  F: { natural: "F", sharp: "F#" },
+  G: { natural: "G" },
+  A: { flat: "Ab", natural: "A" },
+  B: { flat: "Bb", natural: "B" }
+};
+const MOBILE_PRIMARY_TYPES = ["min", "7", "maj7", "sus4", "aug", "6"];
 // 種類セレクタは塊で見せて走査負荷を下げる（小見出し + チップ行）
 const TYPE_GROUPS = [
   { label: "よく使う", types: ["min", "7", "m7", "maj7"] },
@@ -110,6 +126,7 @@ const state = {
   keyMode: "triad",
   selectedDegree: 0,
   keyShowShapes: true,
+  typeExpanded: false,
   pendingResultScroll: false
 };
 
@@ -123,8 +140,52 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initControls() {
-  $("#rootChips").replaceChildren(...NOTES.map(root => chip(root, () => setChord(root, state.type))));
-  $("#typeGroups").replaceChildren(...TYPE_GROUPS.map(group => {
+  renderRootControls();
+  renderTypeControls();
+  $("#keySelect").replaceChildren(...Object.keys(SCALE.major.spellings).map(key => option(key, key)));
+  $("#keySelect").value = state.key;
+  renderRecent();
+}
+
+function renderRootControls() {
+  const baseRow = document.createElement("div");
+  baseRow.className = "chip-row root-base-row";
+  baseRow.append(...ROOT_BASES.map(base => {
+    const button = chip(base, () => selectRootBase(base));
+    button.dataset.rootBase = base;
+    return button;
+  }));
+
+  const accidentalRow = document.createElement("div");
+  accidentalRow.className = "chip-row accidental-row";
+  accidentalRow.append(...ROOT_ACCIDENTALS.map(item => {
+    const button = chip(item.label, () => selectRootAccidental(item.id), `acc-${item.id}`);
+    button.dataset.accidental = item.id;
+    return button;
+  }));
+
+  $("#rootChips").replaceChildren(baseRow, accidentalRow);
+}
+
+function renderTypeControls() {
+  const mobile = document.createElement("div");
+  mobile.className = "mobile-type-picker";
+  const mobileRow = document.createElement("div");
+  mobileRow.className = "chip-row";
+  mobileRow.append(...MOBILE_PRIMARY_TYPES.map(type => chip(typeLabelShort(type), () => setChord(state.root, type), `type-${type}`, TYPES[type].label)));
+  const toggle = document.createElement("button");
+  toggle.className = "more-types";
+  toggle.id = "typeMoreToggle";
+  toggle.type = "button";
+  toggle.addEventListener("click", () => {
+    state.typeExpanded = !state.typeExpanded;
+    renderLookup();
+  });
+  mobile.append(mobileRow, toggle);
+
+  const typeGroups = $("#typeGroups");
+  typeGroups.before(mobile);
+  typeGroups.replaceChildren(...TYPE_GROUPS.map(group => {
     const wrap = document.createElement("div");
     wrap.className = "type-group";
     const label = document.createElement("div");
@@ -136,11 +197,7 @@ function initControls() {
     wrap.append(label, row);
     return wrap;
   }));
-  $("#keySelect").replaceChildren(...Object.keys(SCALE.major.spellings).map(key => option(key, key)));
-  $("#keySelect").value = state.key;
-  renderRecent();
 }
-
 function bindEvents() {
   window.addEventListener("hashchange", () => setScreen(location.hash.replace("#", "") || "lookup"));
   $("#chordSearch").addEventListener("input", event => {
@@ -204,6 +261,26 @@ function setChord(root, type, options = {}) {
   }
 }
 
+function selectRootBase(base) {
+  const current = rootSelectionFromName(state.root);
+  const nextAccidental = ROOT_NAME_MAP[base]?.[current.accidental] ? current.accidental : "natural";
+  setChord(ROOT_NAME_MAP[base][nextAccidental], state.type);
+}
+
+function selectRootAccidental(accidental) {
+  const current = rootSelectionFromName(state.root);
+  const nextRoot = ROOT_NAME_MAP[current.base]?.[accidental];
+  if (nextRoot) setChord(nextRoot, state.type);
+}
+
+function rootSelectionFromName(root) {
+  for (const base of ROOT_BASES) {
+    const entries = Object.entries(ROOT_NAME_MAP[base]);
+    const found = entries.find(([, name]) => name === root);
+    if (found) return { base, accidental: found[0] };
+  }
+  return { base: "C", accidental: "natural" };
+}
 function scrollLookupResultSoon() {
   if (!window.matchMedia("(max-width: 759px)").matches) {
     state.pendingResultScroll = false;
@@ -227,8 +304,19 @@ function renderAll() {
 }
 
 function renderLookup() {
-  document.querySelectorAll("#rootChips .chip").forEach(button => button.classList.toggle("active", button.textContent === state.root));
+  const rootSelection = rootSelectionFromName(state.root);
+  document.querySelectorAll("[data-root-base]").forEach(button => button.classList.toggle("active", button.dataset.rootBase === rootSelection.base));
+  document.querySelectorAll("[data-accidental]").forEach(button => {
+    const nextRoot = ROOT_NAME_MAP[rootSelection.base]?.[button.dataset.accidental];
+    button.disabled = !nextRoot;
+    button.classList.toggle("active", button.dataset.accidental === rootSelection.accidental);
+  });
   document.querySelectorAll("#typeGroups .chip").forEach(button => button.classList.toggle("active", button.dataset.id === `type-${state.type}`));
+  document.querySelectorAll(".mobile-type-picker .chip").forEach(button => button.classList.toggle("active", button.dataset.id === `type-${state.type}`));
+  const showExpandedTypes = state.typeExpanded || (state.type !== "maj" && !MOBILE_PRIMARY_TYPES.includes(state.type));
+  $("#typeGroups").classList.toggle("expanded", showExpandedTypes);
+  const typeMoreToggle = $("#typeMoreToggle");
+  if (typeMoreToggle) typeMoreToggle.textContent = showExpandedTypes ? "閉じる" : "もっと見る";
   const result = $("#lookupResult");
   const shapes = getChordShapes(state.root, state.type);
   const shape = shapes[state.shapeIndex] || shapes[0];

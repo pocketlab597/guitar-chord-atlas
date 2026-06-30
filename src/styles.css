@@ -301,6 +301,15 @@ a {
   gap: 8px;
 }
 
+.root-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.accidental-row .chip {
+  min-width: 42px;
+}
+
 .chip,
 .soft-chip {
   height: 38px;
@@ -327,6 +336,14 @@ a {
   color: var(--accent-ink);
 }
 
+.chip:disabled {
+  color: var(--faint);
+  background: var(--surface-2);
+  border-color: transparent;
+  cursor: not-allowed;
+  opacity: .45;
+}
+
 .soft-chip {
   color: var(--accent-ink);
   background: var(--accent-weak);
@@ -342,6 +359,23 @@ a {
 .type-groups {
   display: grid;
   gap: 12px;
+}
+
+.mobile-type-picker {
+  display: none;
+}
+
+.more-types {
+  width: 100%;
+  height: 36px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .type-group-label {
@@ -914,6 +948,48 @@ a {
     grid-template-columns: 1fr auto;
     height: 52px;
     margin-bottom: 14px;
+  }
+
+  .root-picker {
+    gap: 7px;
+  }
+
+  .root-base-row,
+  .accidental-row {
+    flex-wrap: nowrap;
+  }
+
+  .root-base-row .chip {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  .accidental-row .chip {
+    flex: 0 0 46px;
+  }
+
+  .mobile-type-picker {
+    display: block;
+  }
+
+  .mobile-type-picker .chip-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .mobile-type-picker .chip {
+    padding-inline: 0;
+  }
+
+  #typeGroups {
+    display: none;
+  }
+
+  #typeGroups.expanded {
+    display: grid;
+    margin-top: 12px;
   }
 }
 
