@@ -19,15 +19,15 @@ const ROOT_ACCIDENTALS = [
   { id: "sharp", label: "♯" }
 ];
 const ROOT_NAME_MAP = {
-  C: { natural: "C", sharp: "C#" },
-  D: { natural: "D" },
-  E: { flat: "Eb", natural: "E" },
-  F: { natural: "F", sharp: "F#" },
-  G: { natural: "G" },
-  A: { flat: "Ab", natural: "A" },
-  B: { flat: "Bb", natural: "B" }
+  C: { flat: "B", natural: "C", sharp: "C#" },
+  D: { flat: "C#", natural: "D", sharp: "Eb" },
+  E: { flat: "Eb", natural: "E", sharp: "F" },
+  F: { flat: "E", natural: "F", sharp: "F#" },
+  G: { flat: "F#", natural: "G", sharp: "Ab" },
+  A: { flat: "Ab", natural: "A", sharp: "Bb" },
+  B: { flat: "Bb", natural: "B", sharp: "C" }
 };
-const MOBILE_PRIMARY_TYPES = ["min", "7", "maj7", "sus4", "aug", "6"];
+const MOBILE_PRIMARY_TYPES = ["min", "7", "m7", "maj7", "sus4", "aug"];
 // 種類セレクタは塊で見せて走査負荷を下げる（小見出し + チップ行）
 const TYPE_GROUPS = [
   { label: "よく使う", types: ["min", "7", "m7", "maj7"] },

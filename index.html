@@ -38,12 +38,8 @@
     </header>
 
     <main class="main">
-      <section class="screen active" id="lookupScreen" aria-labelledby="lookupTitle">
+      <section class="screen active" id="lookupScreen" aria-label="コード検索">
         <div class="pane pane-input">
-          <div class="pane-head">
-            <h1 id="lookupTitle" class="pane-title">コードの押さえ方</h1>
-          </div>
-
           <div class="chip-section">
             <div class="row-title">ルート</div>
             <div class="root-picker" id="rootChips"></div>
@@ -54,7 +50,7 @@
           </div>
 
           <label class="search-box compact" for="chordSearch">
-            <span>名前で入力</span>
+            <span class="search-label"><span class="search-icon" aria-hidden="true">⌕</span>入力して検索</span>
             <input id="chordSearch" type="search" inputmode="text" autocomplete="off" spellcheck="false" placeholder="例: Cmaj7 / Am7 / Eaug">
           </label>
         </div>

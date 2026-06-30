@@ -255,6 +255,32 @@ a {
   font-weight: 600;
 }
 
+.search-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  font-size: 0;
+  opacity: .85;
+}
+
+.search-icon::after {
+  content: "";
+  width: 7px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translate(7px, 7px) rotate(45deg);
+}
+
 .search-box span,
 .row-title,
 .control-strip label span {
@@ -948,6 +974,18 @@ a {
     grid-template-columns: 1fr auto;
     height: 52px;
     margin-bottom: 14px;
+  }
+
+  .search-box.compact {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 11px;
+  }
+
+  .search-box.compact input {
+    min-width: 0;
+    font-size: 15px;
   }
 
   .root-picker {
