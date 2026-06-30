@@ -11,20 +11,29 @@ const DEGREE_LABELS = {
   6: "長6度", bb7: "減7度", b7: "短7度", 7: "長7度", 9: "9度"
 };
 const FINGER_NAMES = ["", "人", "中", "薬", "小"];
-const TYPE_ORDER = ["maj", "min", "7", "maj7", "m7", "m7b5", "dim", "dim7", "aug", "6", "m6", "9", "m9", "sus2", "sus4", "7sus4", "add9"];
-const QUICK_TYPES = ["maj", "min", "7", "m7", "maj7", "sus4", "aug", "dim", "m7b5", "add9"];
+const TYPE_ORDER = ["maj", "min", "7", "maj7", "m7", "mMaj7", "m7b5", "dim", "dim7", "aug", "augMaj7", "6", "m6", "9", "m9", "sus2", "sus4", "7sus4", "add9"];
+// 種類セレクタは塊で見せて走査負荷を下げる（小見出し + チップ行）
+const TYPE_GROUPS = [
+  { label: "よく使う", types: ["maj", "min", "7", "m7", "maj7"] },
+  { label: "セブンス・6th", types: ["m7b5", "mMaj7", "dim7", "6", "m6", "7sus4"] },
+  { label: "テンション", types: ["9", "m9", "add9"] },
+  { label: "sus・aug・dim", types: ["sus2", "sus4", "dim", "aug", "augMaj7"] }
+];
 const RECENT_KEY = "chordAtlasPublicRecent";
+const STOCK_KEY = "chordAtlasPublicStock";
 
 const TYPES = {
   maj: { label: "メジャー", suffix: "", formula: ["R", "3", "5"], semis: [0, 4, 7], family: "明るく安定" },
   min: { label: "マイナー", suffix: "m", formula: ["R", "b3", "5"], semis: [0, 3, 7], family: "暗め・切なさ" },
   7: { label: "セブンス", suffix: "7", formula: ["R", "3", "5", "b7"], semis: [0, 4, 7, 10], family: "ブルース感・解決したい響き" },
-  maj7: { label: "メジャーセブンス", suffix: "maj7", formula: ["R", "3", "5", "7"], semis: [0, 4, 7, 11], family: "透明感・浮遊感" },
+  maj7: { label: "メジャーセブンス", suffix: "M7", formula: ["R", "3", "5", "7"], semis: [0, 4, 7, 11], family: "透明感・浮遊感" },
   m7: { label: "マイナーセブンス", suffix: "m7", formula: ["R", "b3", "5", "b7"], semis: [0, 3, 7, 10], family: "柔らかいマイナー" },
-  m7b5: { label: "マイナーセブンフラットファイブ", suffix: "m7b5", formula: ["R", "b3", "b5", "b7"], semis: [0, 3, 6, 10], family: "不安定・次へ行きたい" },
+  mMaj7: { label: "マイナーメジャーセブンス", suffix: "mM7", formula: ["R", "b3", "5", "7"], semis: [0, 3, 7, 11], family: "不穏な主和音" },
+  m7b5: { label: "マイナーセブンフラットファイブ", suffix: "m7♭5", formula: ["R", "b3", "b5", "b7"], semis: [0, 3, 6, 10], family: "不安定・次へ行きたい" },
   dim: { label: "ディミニッシュ", suffix: "dim", formula: ["R", "b3", "b5"], semis: [0, 3, 6], family: "強い緊張" },
   dim7: { label: "ディミニッシュセブンス", suffix: "dim7", formula: ["R", "b3", "b5", "bb7"], semis: [0, 3, 6, 9], family: "強い緊張・通過感" },
   aug: { label: "オーギュメント", suffix: "aug", formula: ["R", "3", "#5"], semis: [0, 4, 8], family: "浮いた増5度" },
+  augMaj7: { label: "オーギュメントメジャーセブンス", suffix: "augM7", formula: ["R", "3", "#5", "7"], semis: [0, 4, 8, 11], family: "浮いた増5度・強い色彩" },
   6: { label: "シックス", suffix: "6", formula: ["R", "3", "5", "6"], semis: [0, 4, 7, 9], family: "明るい余韻" },
   m6: { label: "マイナーシックス", suffix: "m6", formula: ["R", "b3", "5", "6"], semis: [0, 3, 7, 9], family: "渋いマイナー" },
   9: { label: "ナインス", suffix: "9", formula: ["R", "3", "5", "b7", "9"], semis: [0, 4, 7, 10, 14], family: "広がるセブンス" },
@@ -87,14 +96,21 @@ const SCALE = {
 const ROMANS_TRIAD = ["I", "ii", "iii", "IV", "V", "vi", "vii"];
 const ROMANS_SEVENTH = ["Imaj7", "ii7", "iii7", "IVmaj7", "V7", "vi7", "viiø"];
 
+const COMMON_CHORDS = [
+  { root: "C", type: "maj" }, { root: "G", type: "maj" }, { root: "D", type: "maj" },
+  { root: "E", type: "min" }, { root: "A", type: "min" }, { root: "D", type: "min" }
+];
+
 const state = {
   screen: "lookup",
-  root: "E",
-  type: "aug",
+  root: "C",
+  type: "maj",
   shapeIndex: 0,
   key: "C",
   keyMode: "triad",
-  selectedDegree: 0
+  selectedDegree: 0,
+  keyShowShapes: true,
+  pendingResultScroll: false
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -107,8 +123,19 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initControls() {
-  $("#rootChips").replaceChildren(...NOTES.filter(n => !n.includes("#") && !["Eb", "Ab", "Bb"].includes(n)).map(root => chip(root, () => setChord(root, state.type))));
-  $("#typeChips").replaceChildren(...QUICK_TYPES.map(type => chip(typeLabelShort(type), () => setChord(state.root, type), `type-${type}`)));
+  $("#rootChips").replaceChildren(...NOTES.map(root => chip(root, () => setChord(root, state.type))));
+  $("#typeGroups").replaceChildren(...TYPE_GROUPS.map(group => {
+    const wrap = document.createElement("div");
+    wrap.className = "type-group";
+    const label = document.createElement("div");
+    label.className = "type-group-label";
+    label.textContent = group.label;
+    const row = document.createElement("div");
+    row.className = "chip-row";
+    row.append(...group.types.map(type => chip(typeLabelShort(type), () => setChord(state.root, type), `type-${type}`, TYPES[type].label)));
+    wrap.append(label, row);
+    return wrap;
+  }));
   $("#keySelect").replaceChildren(...Object.keys(SCALE.major.spellings).map(key => option(key, key)));
   $("#keySelect").value = state.key;
   renderRecent();
@@ -132,6 +159,13 @@ function bindEvents() {
       renderDiatonic();
     });
   });
+  $("#shapeToggle")?.addEventListener("click", () => {
+    state.keyShowShapes = !state.keyShowShapes;
+    const button = $("#shapeToggle");
+    button.classList.toggle("active", state.keyShowShapes);
+    button.setAttribute("aria-pressed", String(state.keyShowShapes));
+    renderDiatonic();
+  });
   $("#noteInput").addEventListener("input", renderFinder);
   document.querySelectorAll("[data-note-example]").forEach(button => {
     button.addEventListener("click", () => {
@@ -142,16 +176,18 @@ function bindEvents() {
   $("#clearButton").addEventListener("click", () => {
     $("#chordSearch").value = "";
     $("#noteInput").value = "";
+    clearStock();
     renderFinder();
   });
 }
 
 function setScreen(screen) {
-  const normalized = ["lookup", "key", "identify"].includes(screen) ? screen : "lookup";
+  const normalized = ["lookup", "key", "identify", "stock"].includes(screen) ? screen : "lookup";
   state.screen = normalized;
   document.querySelectorAll(".screen").forEach(section => section.classList.remove("active"));
   $(`#${normalized}Screen`)?.classList.add("active");
-  document.querySelectorAll(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.nav === normalized));
+  document.querySelectorAll("[data-nav]").forEach(item => item.classList.toggle("active", item.dataset.nav === normalized));
+  if (normalized === "lookup" && state.pendingResultScroll) scrollLookupResultSoon();
 }
 
 function setChord(root, type, options = {}) {
@@ -162,17 +198,37 @@ function setChord(root, type, options = {}) {
   saveRecent(root, type);
   renderLookup();
   renderRecent();
+  if (options.scroll && window.matchMedia("(max-width: 759px)").matches) {
+    state.pendingResultScroll = true;
+    scrollLookupResultSoon();
+  }
 }
 
+function scrollLookupResultSoon() {
+  if (!window.matchMedia("(max-width: 759px)").matches) {
+    state.pendingResultScroll = false;
+    return;
+  }
+  const scroll = () => {
+    const result = $("#lookupResult");
+    if (!result || $("#lookupScreen")?.classList.contains("active") !== true) return;
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
+    state.pendingResultScroll = false;
+  };
+  requestAnimationFrame(() => requestAnimationFrame(scroll));
+  setTimeout(scroll, 160);
+}
 function renderAll() {
   renderLookup();
   renderDiatonic();
   renderFinder();
+  renderStock();
+  updateStockBadge();
 }
 
 function renderLookup() {
   document.querySelectorAll("#rootChips .chip").forEach(button => button.classList.toggle("active", button.textContent === state.root));
-  document.querySelectorAll("#typeChips .chip").forEach(button => button.classList.toggle("active", button.dataset.id === `type-${state.type}`));
+  document.querySelectorAll("#typeGroups .chip").forEach(button => button.classList.toggle("active", button.dataset.id === `type-${state.type}`));
   const result = $("#lookupResult");
   const shapes = getChordShapes(state.root, state.type);
   const shape = shapes[state.shapeIndex] || shapes[0];
@@ -180,42 +236,67 @@ function renderLookup() {
     result.replaceChildren(empty("このコードのフォームがまだありません。"));
     return;
   }
+  const top = resultTop(chordName(state.root, state.type), TYPES[state.type].family);
+  top.append(stockButton(state.root, state.type));
   result.replaceChildren(
-    resultTop(chordName(state.root, state.type), TYPES[state.type].family),
+    top,
     diagramWrap(renderDiagram(shape, state.root, state.type, "large")),
     shapeTabs(shapes),
-    noteRow(playedNotes(shape, state.root, state.type).filter(n => !n.muted))
+    toneRow(chordTones(state.root, state.type))
   );
 }
 
+function stockButton(root, type) {
+  const stocked = isStocked(root, type);
+  const button = document.createElement("button");
+  button.className = "stock-add" + (stocked ? " active" : "");
+  button.type = "button";
+  button.textContent = stocked ? "✓ ストック済み" : "＋ ストック";
+  button.addEventListener("click", () => {
+    stocked ? removeStock(root, type) : addStock(root, type);
+  });
+  return button;
+}
+
 function renderDiatonic() {
-  const list = $("#diatonicList");
+  const grid = $("#diatonicList");
+  grid.classList.toggle("hide-shapes", !state.keyShowShapes);
   const types = state.keyMode === "triad" ? SCALE.major.triads : SCALE.major.sevenths;
   const romans = state.keyMode === "triad" ? ROMANS_TRIAD : ROMANS_SEVENTH;
   const notes = SCALE.major.spellings[state.key];
-  list.replaceChildren(...notes.map((rootName, index) => {
+  grid.replaceChildren(...notes.map((rootName, index) => {
     const root = normalizeNote(rootName);
     const type = types[index];
-    const button = document.createElement("button");
-    button.className = "degree-row";
-    button.type = "button";
-    button.classList.toggle("active", index === state.selectedDegree);
-    button.innerHTML = `<span class="roman"></span><span class="chord"></span><span class="hint">押さえ方</span>`;
-    button.querySelector(".roman").textContent = romans[index];
-    button.querySelector(".chord").textContent = displayChordName(rootName, type);
-    button.addEventListener("click", () => {
-      state.selectedDegree = index;
-      renderDiatonic();
+    const shape = bestShape(root, type, "easy");
+    const card = document.createElement("button");
+    card.className = "degree-card";
+    card.type = "button";
+
+    const head = document.createElement("div");
+    head.className = "dc-head";
+    const roman = document.createElement("span");
+    roman.className = "roman";
+    roman.textContent = romans[index];
+    const chord = document.createElement("span");
+    chord.className = "chord";
+    chord.textContent = displayChordName(rootName, type);
+    head.append(roman, chord);
+
+    const tones = document.createElement("div");
+    tones.className = "dc-tones";
+    const toneOffsets = state.keyMode === "seventh" ? [0, 2, 4, 6] : [0, 2, 4];
+    tones.textContent = toneOffsets.map(offset => notes[(index + offset) % 7]).join(" ");
+
+    card.append(head, tones);
+    if (state.keyShowShapes && shape) {
+      card.append(diagramWrap(renderDiagram(shape, root, type, "mini", rootName)));
+    }
+    card.addEventListener("click", () => {
+      location.hash = "lookup";
+      setChord(root, type, { scroll: true });
     });
-    return button;
+    return card;
   }));
-  const selectedRootName = notes[state.selectedDegree];
-  const selectedType = types[state.selectedDegree];
-  const shape = bestShape(normalizeNote(selectedRootName), selectedType, "easy");
-  $("#keyDetail").replaceChildren(
-    resultTop(displayChordName(selectedRootName, selectedType), `${state.key}メジャー / ${state.keyMode === "triad" ? "三和音" : "四和音"}`),
-    diagramWrap(renderDiagram(shape, normalizeNote(selectedRootName), selectedType, "large", selectedRootName))
-  );
 }
 
 function renderFinder() {
@@ -246,8 +327,8 @@ function renderFinder() {
     open.type = "button";
     open.textContent = "コードを見る";
     open.addEventListener("click", () => {
-      setChord(candidate.root, candidate.type);
       location.hash = "lookup";
+      setChord(candidate.root, candidate.type, { scroll: true });
     });
     actions.append(open);
     card.append(title, body, meta, actions);
@@ -273,7 +354,11 @@ function resultTop(name, sub) {
 function diagramWrap(svg) {
   const wrap = document.createElement("div");
   wrap.className = "diagram-wrap";
-  wrap.innerHTML = svg;
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const parsedSvg = doc.documentElement;
+  if (parsedSvg?.nodeName.toLowerCase() === "svg") {
+    wrap.append(document.importNode(parsedSvg, true));
+  }
   return wrap;
 }
 
@@ -293,6 +378,35 @@ function shapeTabs(shapes) {
     tabs.append(button);
   });
   return tabs;
+}
+
+function chordTones(root, type) {
+  const info = TYPES[type];
+  const rootIndex = noteIndex(root);
+  return info.semis.map((semi, i) => ({ note: NOTES[(rootIndex + semi) % 12], degree: info.formula[i] }));
+}
+
+function toneRow(tones) {
+  const row = document.createElement("div");
+  row.className = "tone-row";
+  tones.forEach(tone => {
+    const item = document.createElement("div");
+    item.className = "tone";
+    const dot = document.createElement("span");
+    dot.className = `tone-dot ${degreeClass(tone.degree)}`;
+    const name = document.createElement("b");
+    name.textContent = tone.note;
+    const role = document.createElement("span");
+    role.className = "tone-role";
+    role.textContent = DEGREE_LABELS[tone.degree] || tone.degree;
+    item.append(dot, name, role);
+    row.append(item);
+  });
+  return row;
+}
+
+function degreeClass(degree) {
+  return `degree-${String(degree).replace("#", "sharp").replace(/b/g, "flat")}`;
 }
 
 function noteRow(notes) {
@@ -318,11 +432,12 @@ function empty(text) {
   return div;
 }
 
-function chip(text, onClick, id = "") {
+function chip(text, onClick, id = "", title = "") {
   const button = document.createElement("button");
   button.className = "chip";
   button.type = "button";
   if (id) button.dataset.id = id;
+  if (title) button.title = title;
   button.textContent = text;
   button.addEventListener("click", onClick);
   return button;
@@ -352,8 +467,106 @@ function saveRecent(root, type) {
 
 function renderRecent() {
   const recent = readRecent();
-  const chips = recent.length ? recent : [{ root: "E", type: "aug" }, { root: "A", type: "m7" }, { root: "C", type: "maj" }];
-  $("#recentChips").replaceChildren(...chips.map(item => chip(chordName(item.root, item.type), () => setChord(item.root, item.type))));
+  const hasHistory = recent.length > 0;
+  const chips = hasHistory ? recent : COMMON_CHORDS;
+  const title = $("#recentTitle");
+  if (title) title.textContent = hasHistory ? "最近見たコード" : "よく使うコード";
+  $("#recentChips").replaceChildren(...chips.map(item => chip(chordName(item.root, item.type), () => setChord(item.root, item.type, { scroll: true }))));
+}
+
+function readStock() {
+  try {
+    const value = JSON.parse(localStorage.getItem(STOCK_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStock(list) {
+  localStorage.setItem(STOCK_KEY, JSON.stringify(list.slice(0, 12)));
+}
+
+function isStocked(root, type) {
+  return readStock().some(item => item.root === root && item.type === type);
+}
+
+function addStock(root, type) {
+  const list = readStock();
+  if (list.some(item => item.root === root && item.type === type)) return;
+  list.push({ root, type });
+  saveStock(list);
+  renderStock();
+  renderLookup();
+  updateStockBadge();
+}
+
+function removeStock(root, type) {
+  saveStock(readStock().filter(item => !(item.root === root && item.type === type)));
+  renderStock();
+  renderLookup();
+  updateStockBadge();
+}
+
+function clearStock() {
+  localStorage.removeItem(STOCK_KEY);
+  renderStock();
+  renderLookup();
+  updateStockBadge();
+}
+
+function updateStockBadge() {
+  const count = readStock().length;
+  document.querySelectorAll("[data-stock-badge]").forEach(badge => {
+    badge.textContent = count ? String(count) : "";
+    badge.hidden = count === 0;
+  });
+}
+
+function renderStock() {
+  const grid = $("#stockGrid");
+  if (!grid) return;
+  const list = readStock();
+  if (!list.length) {
+    grid.classList.add("is-empty");
+    grid.replaceChildren(empty("押さえ方の画面で「＋ ストック」を押すと、ここにコードが溜まります。練習したい進行をまとめて見比べられます。"));
+    return;
+  }
+  grid.classList.remove("is-empty");
+  grid.replaceChildren(...list.map(item => {
+    const { root, type } = item;
+    const shape = bestShape(root, type);
+    const card = document.createElement("div");
+    card.className = "degree-card stock-card";
+
+    const head = document.createElement("div");
+    head.className = "dc-head";
+    const chord = document.createElement("span");
+    chord.className = "chord";
+    chord.textContent = chordName(root, type);
+    const remove = document.createElement("button");
+    remove.className = "dc-remove";
+    remove.type = "button";
+    remove.setAttribute("aria-label", `${chordName(root, type)} をストックから外す`);
+    remove.textContent = "×";
+    remove.addEventListener("click", event => {
+      event.stopPropagation();
+      removeStock(root, type);
+    });
+    head.append(chord, remove);
+
+    const tones = document.createElement("div");
+    tones.className = "dc-tones";
+    tones.textContent = chordTones(root, type).map(tone => tone.note).join(" ");
+
+    card.append(head, tones);
+    if (shape) card.append(diagramWrap(renderDiagram(shape, root, type, "mini")));
+    card.addEventListener("click", () => {
+      location.hash = "lookup";
+      setChord(root, type, { scroll: true });
+    });
+    return card;
+  }));
 }
 
 function getChordShapes(root, type) {
@@ -402,6 +615,12 @@ function movableTemplates(type) {
       { label: "6弦ルート", rootString: 6, rel: [0, 2, 0, 0, 0, 0], fingers: [1, 3, 1, 1, 1, 1] },
       { label: "5弦ルート", rootString: 5, rel: [-1, 0, 2, 0, 1, 0], fingers: [0, 1, 3, 1, 2, 1] }
     ],
+    // 要確認: mMaj7 / augMaj7 は公開版に専用データが無いため標準ボイシングを暫定で配置（音楽データは要検証）
+    mMaj7: [
+      { label: "6弦ルート", rootString: 6, rel: [0, 2, 1, 0, 0, 0], fingers: [1, 3, 2, 1, 1, 1] },
+      { label: "5弦ルート", rootString: 5, rel: [-1, 0, 2, 1, 1, 0], fingers: [0, 1, 3, 2, 4, 1] }
+    ],
+    augMaj7: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 3, 1, 2, -1], fingers: [0, 1, 4, 2, 3, 0] }],
     m7b5: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 0, 1, -1], fingers: [0, 1, 2, 1, 3, 0] }],
     dim: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 2, 1, -1], fingers: [0, 1, 2, 4, 3, 0] }],
     dim7: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 2, 1, -1], fingers: [0, 1, 2, 4, 3, 0] }],
@@ -513,27 +732,30 @@ function renderDiagram(shape, root, type, size, displayRoot = root) {
   for (let i = 0; i <= 5; i++) {
     const x = left + i * fretGap;
     svg += `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="${c.stroke}" stroke-width="${i === 0 && start === 1 ? 7 : 1.8}" opacity="${i === 0 && start === 1 ? .65 : .35}"/>`;
-    if (i < 5 && !isMini) svg += `<text x="${x + fretGap / 2}" y="${bottom + 26}" text-anchor="middle" font-size="12" fill="${c.muted}">${start + i}</text>`;
+    if (i < 5) svg += `<text x="${x + fretGap / 2}" y="${bottom + 26}" text-anchor="middle" font-size="12" fill="${c.muted}">${start + i}</text>`;
   }
   barreGroups(shape, start).forEach(group => {
     const x = left + (group.fret - start + .5) * fretGap;
     const ys = group.strings.map(stringIndex => bottom - stringIndex * stringGap);
     const y1 = Math.min(...ys) - dotRadius;
     const y2 = Math.max(...ys) + dotRadius;
-    svg += `<rect x="${x - dotRadius * .72}" y="${y1}" width="${dotRadius * 1.44}" height="${y2 - y1}" rx="${dotRadius}" fill="rgba(242,200,75,.45)" stroke="rgba(216,154,0,.55)" stroke-width="2"/>`;
+    svg += `<rect x="${x - dotRadius * .72}" y="${y1}" width="${dotRadius * 1.44}" height="${y2 - y1}" rx="${dotRadius}" fill="rgba(76,141,255,.16)" stroke="rgba(76,141,255,.45)" stroke-width="2"/>`;
   });
   shape.frets.forEach((fret, index) => {
     const y = bottom - index * stringGap;
     const item = notes[index];
     if (fret < 0) {
-      svg += `<text x="${left - 18}" y="${y + 6}" text-anchor="middle" font-size="18" font-weight="900" fill="${c.muted}">x</text>`;
+      svg += `<text x="${left - 20}" y="${y + 5}" text-anchor="middle" font-size="${isMini ? 14 : 16}" font-weight="700" fill="${c.muted}">×</text>`;
       return;
     }
-    if (fret === 0) {
+    if (!isMini) {
+      const noteColor = DEGREE_COLORS[item.degree] || c.text;
+      svg += `<text x="${left - 22}" y="${y + 5}" text-anchor="middle" font-size="14" font-weight="800" fill="${noteColor}">${item.note}</text>`;
+    } else if (fret === 0) {
       const color = DEGREE_COLORS[item.degree] || c.muted;
-      svg += `<circle cx="${left - 18}" cy="${y}" r="8" fill="none" stroke="${color}" stroke-width="2"/>`;
-      return;
+      svg += `<circle cx="${left - 16}" cy="${y}" r="7" fill="none" stroke="${color}" stroke-width="2"/>`;
     }
+    if (fret === 0) return;
     const x = left + (fret - start + .5) * fretGap;
     const color = DEGREE_COLORS[item.degree] || c.text;
     const finger = FINGER_NAMES[shape.fingers[index]] || "";
@@ -589,13 +811,36 @@ function rootFret(root, stringNumber) {
   return (noteIndex(root) - noteIndex(open) + 12) % 12;
 }
 
+// M7(メジャー7) と m7(マイナー7) は大文字小文字だけが違うので、小文字化せず大小を区別して照合する
+const TYPE_ALIASES = {
+  "": "maj", "maj": "maj", "M": "maj",
+  "m": "min", "min": "min", "-": "min",
+  "7": "7", "dom7": "7",
+  "M7": "maj7", "maj7": "maj7", "Maj7": "maj7", "ma7": "maj7",
+  "m7": "m7", "min7": "m7", "-7": "m7",
+  "mM7": "mMaj7", "mMaj7": "mMaj7", "minMaj7": "mMaj7",
+  "m7b5": "m7b5", "m7-5": "m7b5", "min7b5": "m7b5",
+  "dim": "dim",
+  "dim7": "dim7",
+  "aug": "aug", "+": "aug",
+  "augM7": "augMaj7", "augMaj7": "augMaj7", "+M7": "augMaj7",
+  "6": "6",
+  "m6": "m6", "min6": "m6",
+  "9": "9",
+  "m9": "m9", "min9": "m9",
+  "sus2": "sus2",
+  "sus4": "sus4", "sus": "sus4",
+  "7sus4": "7sus4", "7sus": "7sus4",
+  "add9": "add9", "add2": "add9"
+};
+
 function parseChordName(raw) {
   const compact = raw.trim().replace(/\s+/g, "");
   const match = compact.match(/^([A-Ga-g])([#♯b♭]?)(.*)$/);
   if (!match) return null;
   const root = normalizeNote(formatRootToken(match[1] + match[2]));
-  const suffix = match[3].toLowerCase();
-  const type = Object.entries(TYPES).find(([id, info]) => id.toLowerCase() === suffix || info.suffix.toLowerCase() === suffix)?.[0];
+  const suffix = match[3].replace(/[♭]/g, "b").replace(/[♯]/g, "#");
+  const type = TYPE_ALIASES[suffix];
   return root && type ? { root, type } : null;
 }
 
