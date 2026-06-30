@@ -720,7 +720,7 @@ function renderDiagram(shape, root, type, size, displayRoot = root) {
   const notes = playedNotes(shape, root, type);
   const isMini = size !== "large";
   const dotRadius = isMini ? 15 : 18;
-  let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${displayName} chord diagram">`;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${displayName} chord diagram">`;
   svg += `<rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="16" fill="${c.bg}" stroke="rgba(35,48,58,.1)"/>`;
   svg += `<text x="${left}" y="38" font-size="${isMini ? 20 : 28}" font-weight="900" fill="${c.text}">${displayName}</text>`;
   if (!isMini) svg += `<text x="${right - 90}" y="38" font-size="13" font-weight="800" fill="${c.muted}">${publicShapeLabel(shape)}</text>`;
