@@ -28,4 +28,4 @@ python -m http.server 8787 --bind 127.0.0.1
 
 ## デプロイ
 
-静的サイトとしてそのまま配信できます。GitHub Pages、Netlify、Vercel、Cloudflare Pages などでビルドコマンドなし・公開ディレクトリをリポジトリルートにすれば動きます。
+静的サイトとしてそのまま配信できます。初期公開はCloudflare Pagesを想定しています。ビルドコマンドなし、公開ディレクトリはリポジトリルートです。詳しくは `docs/DEPLOY.md` を参照してください。
