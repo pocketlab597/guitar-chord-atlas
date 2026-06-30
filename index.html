@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="ギター練習中にコード、キーのダイアトニック、音名からのコード判定をすぐ確認できる練習補助ツール。">
+  <meta name="theme-color" content="#fff8d9">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';">
+  <title>Chord Atlas - ギターコード練習ツール</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header" aria-label="サイトヘッダー">
+      <a class="brand" href="#lookup" aria-label="Chord Atlas ホーム">
+        <span class="brand-mark" aria-hidden="true">CA</span>
+        <span>
+          <span class="brand-name">Chord Atlas</span>
+          <span class="brand-sub">ギター練習中のコード確認</span>
+        </span>
+      </a>
+      <button class="ghost-button" id="clearButton" type="button">クリア</button>
+    </header>
+
+    <main class="main">
+      <section class="screen active" id="lookupScreen" aria-labelledby="lookupTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Chord lookup</p>
+          <h1 id="lookupTitle">コードをすぐ見る</h1>
+          <p class="lead">コード名を打つか、ルートと種類を2タップで選びます。</p>
+        </div>
+
+        <label class="search-box" for="chordSearch">
+          <span>コード名・音名を入力</span>
+          <input id="chordSearch" type="search" inputmode="text" autocomplete="off" spellcheck="false" placeholder="Eaug / Am7 / ドミソ">
+        </label>
+
+        <div class="chip-section" aria-labelledby="recentTitle">
+          <div class="row-title" id="recentTitle">最近使った</div>
+          <div class="chip-row" id="recentChips"></div>
+        </div>
+
+        <div class="picker-grid">
+          <div class="chip-section">
+            <div class="row-title">ルート</div>
+            <div class="chip-row" id="rootChips"></div>
+          </div>
+          <div class="chip-section">
+            <div class="row-title">種類</div>
+            <div class="chip-row" id="typeChips"></div>
+          </div>
+        </div>
+
+        <article class="result-card" id="lookupResult" aria-live="polite"></article>
+      </section>
+
+      <section class="screen" id="keyScreen" aria-labelledby="keyTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Key chords</p>
+          <h1 id="keyTitle">キーのコードを見る</h1>
+          <p class="lead">最初はコード名だけ。押さえ方は必要なコードだけ開きます。</p>
+        </div>
+
+        <div class="control-strip">
+          <label>
+            <span>Key</span>
+            <select id="keySelect"></select>
+          </label>
+          <div class="segmented" role="group" aria-label="三和音と四和音">
+            <button class="segment active" type="button" data-mode="triad">三和音</button>
+            <button class="segment" type="button" data-mode="seventh">四和音</button>
+          </div>
+        </div>
+
+        <div class="diatonic-list" id="diatonicList"></div>
+        <article class="result-card compact" id="keyDetail" aria-live="polite"></article>
+      </section>
+
+      <section class="screen" id="identifyScreen" aria-labelledby="identifyTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Identify</p>
+          <h1 id="identifyTitle">音からコード判定</h1>
+          <p class="lead">ドミソ、C E G、D F A C のように入れると候補を出します。</p>
+        </div>
+
+        <label class="search-box textarea-box" for="noteInput">
+          <span>構成音</span>
+          <textarea id="noteInput" rows="4" spellcheck="false" placeholder="例: ドミソ&#10;例: C E G&#10;例: F A C E"></textarea>
+        </label>
+
+        <div class="chip-row">
+          <button class="soft-chip" type="button" data-note-example="ドミソ">ドミソ</button>
+          <button class="soft-chip" type="button" data-note-example="F A C E">F A C E</button>
+          <button class="soft-chip" type="button" data-note-example="D F A C">D F A C</button>
+        </div>
+
+        <div class="finder-results" id="finderResults" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="主要機能">
+      <a class="nav-item active" href="#lookup" data-nav="lookup">
+        <b>検索</b>
+      </a>
+      <a class="nav-item" href="#key" data-nav="key">
+        <b>キー</b>
+      </a>
+      <a class="nav-item" href="#identify" data-nav="identify">
+        <b>判定</b>
+      </a>
+    </nav>
+  </div>
+
+  <script src="./src/app.js" defer></script>
+</body>
+</html>
+
