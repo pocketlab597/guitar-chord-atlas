@@ -86,11 +86,12 @@ a {
   top: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
   align-items: center;
   gap: 16px;
+  width: 100%;
   height: var(--header-height);
-  margin-bottom: 18px;
+  margin: 0 0 18px;
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   backdrop-filter: blur(8px);
 }
@@ -185,6 +186,14 @@ a {
 .ghost-button:hover {
   border-color: var(--line-2);
   color: var(--ink);
+}
+
+.ghost-button[hidden] {
+  display: none;
+}
+
+.header-clear {
+  min-width: 74px;
 }
 
 /* ---------- Screens / panes ---------- */
@@ -943,7 +952,12 @@ a {
     column-gap: 32px;
     row-gap: 20px;
     align-items: start;
-    justify-content: center;
+    justify-content: start;
+  }
+
+  .pane-input,
+  .pane-aux {
+    width: 320px;
   }
 
   /* 結果は常に右カラムで縦に通し、左カラムに入力→履歴を積む */
@@ -979,6 +993,10 @@ a {
     grid-template-columns: 1fr auto;
     height: 52px;
     margin-bottom: 14px;
+  }
+
+  .header-clear {
+    min-width: 64px;
   }
 
   .search-box.compact {

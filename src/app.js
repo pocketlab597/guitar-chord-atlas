@@ -11,7 +11,8 @@ const DEGREE_LABELS = {
   6: "長6度", bb7: "減7度", b7: "短7度", 7: "長7度", 9: "9度"
 };
 const FINGER_NAMES = ["", "人", "中", "薬", "小"];
-const TYPE_ORDER = ["maj", "min", "7", "maj7", "m7", "mMaj7", "m7b5", "dim", "dim7", "aug", "augMaj7", "6", "m6", "9", "m9", "sus2", "sus4", "7sus4", "add9"];
+const TYPE_ORDER = ["maj", "min", "7", "m7", "maj7", "sus4", "add9", "sus2", "7sus4", "dim", "dim7", "m7b5", "aug"];
+const ACTIVE_TYPES = new Set(TYPE_ORDER);
 const ROOT_BASES = ["C", "D", "E", "F", "G", "A", "B"];
 const ROOT_ACCIDENTALS = [
   { id: "flat", label: "♭" },
@@ -26,13 +27,11 @@ const ROOT_NAME_MAP = {
   A: { flat: "Ab", natural: "A", sharp: "Bb" },
   B: { flat: "Bb", natural: "B", sharp: "C" }
 };
-const MOBILE_PRIMARY_TYPES = ["min", "7", "m7", "maj7", "sus4", "aug"];
-// 種類セレクタは塊で見せて走査負荷を下げる（小見出し + チップ行）
+const MOBILE_PRIMARY_TYPES = ["min", "7", "m7", "maj7", "sus4", "add9"];
+// 種類セレクタは、公開確認対象のコードだけに絞る。
 const TYPE_GROUPS = [
-  { label: "よく使う", types: ["min", "7", "m7", "maj7"] },
-  { label: "セブンス・6th", types: ["m7b5", "mMaj7", "dim7", "6", "m6", "7sus4"] },
-  { label: "テンション", types: ["9", "m9", "add9"] },
-  { label: "sus・aug・dim", types: ["sus2", "sus4", "dim", "aug", "augMaj7"] }
+  { label: "基本", types: ["min", "7", "m7", "maj7", "sus4", "add9"] },
+  { label: "もっと見る", types: ["sus2", "7sus4", "dim", "dim7", "m7b5", "aug"] }
 ];
 const RECENT_KEY = "chordAtlasPublicRecent";
 const STOCK_KEY = "chordAtlasPublicStock";
@@ -82,10 +81,92 @@ const OPEN_SHAPES = {
   "E:m7": [[0, 2, 0, 0, 0, 0], [0, 2, 0, 0, 0, 0], "開放Em7"],
   "A:m7": [[-1, 0, 2, 0, 1, 0], [0, 0, 2, 0, 1, 0], "開放Am7"],
   "B:m7b5": [[-1, 2, 3, 2, 3, -1], [0, 1, 2, 1, 3, 0], "5弦ルート"],
+  "E:aug": [[0, 3, 2, 1, 1, 0], [0, 4, 3, 1, 2, 0], "開放Eaug"],
+  "E:6": [[0, 2, 2, 1, 2, 0], [0, 2, 3, 1, 4, 0], "開放E6"],
+  "A:6": [[-1, 0, 2, 2, 2, 2], [0, 0, 1, 1, 1, 1], "開放A6"],
+  "E:m6": [[0, 2, 2, 0, 2, 0], [0, 2, 3, 0, 4, 0], "開放Em6"],
+  "A:m6": [[-1, 0, 2, 2, 1, 2], [0, 0, 2, 3, 1, 4], "開放Am6"],
+  "E:9": [[0, 2, 0, 1, 0, 2], [0, 2, 0, 1, 0, 3], "開放E9"],
+  "A:9": [[-1, 0, 2, 4, 2, 3], [0, 0, 1, 4, 2, 3], "開放A9"],
+  "E:m9": [[0, 2, 0, 0, 0, 2], [0, 2, 0, 0, 0, 3], "開放Em9"],
+  "A:m9": [[-1, 0, 2, 4, 1, 3], [0, 0, 2, 4, 1, 3], "開放Am9"],
+  "E:mMaj7": [[0, 2, 1, 0, 0, 0], [0, 2, 1, 0, 0, 0], "開放EmM7"],
+  "A:mMaj7": [[-1, 0, 2, 1, 1, 0], [0, 0, 3, 1, 2, 0], "開放AmM7"],
+  "F:m7b5": [[1, -1, 1, 1, 0, -1], [1, 0, 2, 3, 0, 0], "開放寄り"],
+  "A:m7b5": [[-1, 0, 1, 0, 1, -1], [0, 0, 1, 0, 2, 0], "開放Am7♭5"],
+  "F:dim": [[1, 2, -1, 1, 0, -1], [1, 3, 0, 2, 0, 0], "開放寄り"],
+  "A:dim": [[-1, 0, 1, 2, 1, -1], [0, 0, 1, 3, 2, 0], "開放Adim"],
   "C:add9": [[-1, 3, 2, 0, 3, 0], [0, 2, 1, 0, 3, 0], "開放Cadd9"],
+  "F:add9": [[-1, -1, 3, 2, 1, 3], [0, 0, 3, 2, 1, 4], "定番Fadd9"],
+  "E:sus2": [[0, 2, 4, 4, 0, 0], [0, 1, 3, 4, 0, 0], "開放Esus2"],
+  "A:sus2": [[-1, 0, 2, 2, 0, 0], [0, 0, 1, 2, 0, 0], "開放Asus2"],
+  "D:sus2": [[-1, -1, 0, 2, 3, 0], [0, 0, 0, 1, 3, 0], "開放Dsus2"],
   "D:sus4": [[-1, -1, 0, 2, 3, 3], [0, 0, 0, 1, 3, 4], "開放Dsus4"],
   "E:sus4": [[0, 2, 2, 2, 0, 0], [0, 1, 2, 3, 0, 0], "開放Esus4"],
-  "A:sus4": [[-1, 0, 2, 2, 3, 0], [0, 0, 1, 2, 3, 0], "開放Asus4"]
+  "A:sus4": [[-1, 0, 2, 2, 3, 0], [0, 0, 1, 2, 3, 0], "開放Asus4"],
+  "D:7sus4": [[-1, -1, 0, 2, 1, 3], [0, 0, 0, 2, 1, 3], "開放D7sus4"],
+  "E:7sus4": [[0, 2, 0, 2, 0, 0], [0, 1, 0, 2, 0, 0], "開放E7sus4"],
+  "A:7sus4": [[-1, 0, 2, 0, 3, 0], [0, 0, 1, 0, 3, 0], "開放A7sus4"]
+};
+
+
+const VERIFIED_SHAPES = {
+  add9: {
+    C: [["x32030","021030"]],
+    "C#": [["x43141","032141"],["x43x44","021034"]],
+    D: [["x54252","032141"],["x57770","012340"]],
+    "Eb": [["x65363","032141"],["x65066","021034"]],
+    E: [["022102","023104"],["x76474","032141"]],
+    F: [["xx3213","003214"],["x87585","032141"]],
+    "F#": [["21x122","310244"],["xx4324","003214"]],
+    G: [["300203","200103"],["xa97a7","032141"]],
+    "Ab": [["43x34x","310240"],["xx6546","003214"]],
+    A: [["x02420","001320"],["xx7657","003214"]],
+    "Bb": [["x10311","010423"],["xx8768","003214"]],
+    B: [["x21x22","021034"],["76x677","310244"]]
+  },
+  sus2: {
+    C: [["x30013","030014"],["x30033","010023"]],
+    "C#": [["x46644","013411"],["96689x","411340"]],
+    D: [["xx0230","000230"]],
+    "Eb": [["x68866","013411"],["b88abx","311240"]],
+    E: [["024400","013400"],["079977","013411"]],
+    F: [["133x13","123014"]],
+    "F#": [["2xx122","200134"]],
+    G: [["300033","100023"],["xa778a","031124"]],
+    "Ab": [["4xx344","200134"],["466x46","123014"]],
+    A: [["x02200","002300"],["x02400","001400"]],
+    "Bb": [["x13311","013411"],["63356x","311240"]],
+    B: [["x24422","013411"],["7xx677","200134"]]
+  },
+  aug: {
+    C: [["x3211x","032110"],["x3655x","014230"]],
+    "C#": [["98766x","432110"],["9xbaa9","104231"]],
+    D: [["xx0332","000231"],["x5433x","032110"]],
+    "Eb": [["x6544x","032110"],["ba988x","432110"]],
+    E: [["032110","043120"],["x7655x","032110"]],
+    F: [["xx3221","004231"],["x8766x","032110"]],
+    "F#": [["xx4332","004231"],["xx433x","002110"]],
+    G: [["32100x","321000"],["3x544x","104230"]],
+    "Ab": [["43211x","432110"],["4x655x","104230"]],
+    A: [["x03221","004231"],["54322x","432110"]],
+    "Bb": [["x1433x","014230"],["65433x","432110"]],
+    B: [["x2100x","021000"],["7x988x","104230"]]
+  },
+  dim7: {
+    C: [["x34242","023141"],["8x787x","201310"]],
+    "C#": [["x45353","023141"],["9x898x","201310"]],
+    D: [["xx0101","000203"],["x56464","023141"]],
+    "Eb": [["xx1212","001324"],["x67575","023141"]],
+    E: [["012020","012030"],["xx2323","001324"]],
+    F: [["1x0101","100203"],["xx3434","001314"]],
+    "F#": [["2x121x","201310"],["234242","123141"]],
+    G: [["31x320","310420"],["3x2320","301420"]],
+    "Ab": [["4x3434","201314"],["xx6767","001324"]],
+    A: [["x01212","001324"],["5x454x","201310"]],
+    "Bb": [["x12020","012030"],["678686","123141"]],
+    B: [["x23131","023141"],["7x676x","301420"]]
+  }
 };
 
 const SCALE = {
@@ -245,6 +326,7 @@ function setScreen(screen) {
   document.querySelectorAll(".screen").forEach(section => section.classList.remove("active"));
   $(`#${normalized}Screen`)?.classList.add("active");
   document.querySelectorAll("[data-nav]").forEach(item => item.classList.toggle("active", item.dataset.nav === normalized));
+  $("#clearButton")?.toggleAttribute("hidden", normalized !== "stock");
   if (normalized === "lookup" && state.pendingResultScroll) scrollLookupResultSoon();
 }
 
@@ -266,7 +348,7 @@ function setChord(root, type, options = {}) {
 function selectRootBase(base) {
   state.rootInputBase = base;
   state.rootInputAccidental = null;
-  setChord(ROOT_NAME_MAP[base].natural, state.type, { keepRootInput: true });
+  setChord(ROOT_NAME_MAP[base].natural, "maj", { keepRootInput: true });
 }
 
 function selectRootAccidental(accidental) {
@@ -558,14 +640,23 @@ function readRecent() {
   }
 }
 
+function isActiveType(type) {
+  return ACTIVE_TYPES.has(type);
+}
+
+function activeItems(items) {
+  return items.filter(item => item && item.root && isActiveType(item.type));
+}
+
 function saveRecent(root, type) {
-  const recent = readRecent().filter(item => !(item.root === root && item.type === type));
+  if (!isActiveType(type)) return;
+  const recent = activeItems(readRecent()).filter(item => !(item.root === root && item.type === type));
   recent.unshift({ root, type });
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, 8)));
 }
 
 function renderRecent() {
-  const recent = readRecent();
+  const recent = activeItems(readRecent());
   const hasHistory = recent.length > 0;
   const chips = hasHistory ? recent : COMMON_CHORDS;
   const title = $("#recentTitle");
@@ -583,15 +674,17 @@ function readStock() {
 }
 
 function saveStock(list) {
-  localStorage.setItem(STOCK_KEY, JSON.stringify(list.slice(0, 12)));
+  localStorage.setItem(STOCK_KEY, JSON.stringify(activeItems(list).slice(0, 12)));
 }
 
 function isStocked(root, type) {
-  return readStock().some(item => item.root === root && item.type === type);
+  if (!isActiveType(type)) return false;
+  return activeItems(readStock()).some(item => item.root === root && item.type === type);
 }
 
 function addStock(root, type) {
-  const list = readStock();
+  if (!isActiveType(type)) return;
+  const list = activeItems(readStock());
   if (list.some(item => item.root === root && item.type === type)) return;
   list.push({ root, type });
   saveStock(list);
@@ -601,7 +694,7 @@ function addStock(root, type) {
 }
 
 function removeStock(root, type) {
-  saveStock(readStock().filter(item => !(item.root === root && item.type === type)));
+  saveStock(activeItems(readStock()).filter(item => !(item.root === root && item.type === type)));
   renderStock();
   renderLookup();
   updateStockBadge();
@@ -615,7 +708,7 @@ function clearStock() {
 }
 
 function updateStockBadge() {
-  const count = readStock().length;
+  const count = activeItems(readStock()).length;
   document.querySelectorAll("[data-stock-badge]").forEach(badge => {
     badge.textContent = count ? String(count) : "";
     badge.hidden = count === 0;
@@ -625,7 +718,7 @@ function updateStockBadge() {
 function renderStock() {
   const grid = $("#stockGrid");
   if (!grid) return;
-  const list = readStock();
+  const list = activeItems(readStock());
   if (!list.length) {
     grid.classList.add("is-empty");
     grid.replaceChildren(empty("押さえ方の画面で「＋ ストック」を押すと、ここにコードが溜まります。練習したい進行をまとめて見比べられます。"));
@@ -670,10 +763,18 @@ function renderStock() {
 
 function getChordShapes(root, type) {
   const shapes = [];
+  const verified = verifiedShapes(root, type);
+  shapes.push(...verified);
+  if (verified.length) {
+    return uniqueShapes(shapes
+      .map(shape => ({ ...shape, fingers: sanitizeFingers(shape.frets, shape.fingers) }))
+      .filter(shape => !hasImpossibleFingerStretch(shape)))
+      .sort((a, b) => shapeScore(a) - shapeScore(b));
+  }
   const openKey = `${root}:${type}`;
   if (OPEN_SHAPES[openKey]) {
     const [frets, fingers, label] = OPEN_SHAPES[openKey];
-    shapes.push({ frets, fingers, label, source: "open" });
+    shapes.push({ frets, fingers: sanitizeFingers(frets, fingers), label, source: "open" });
   }
   if (type === "dim7") shapes.push(...dim7Shapes(root));
   if (type === "dim") shapes.push(...dimTriadSixthRootShapes(root));
@@ -683,13 +784,16 @@ function getChordShapes(root, type) {
     if (fret !== null && fret >= 0 && fret <= 11) {
       shapes.push({
         frets: template.rel.map(v => v < 0 ? -1 : v + fret),
-        fingers: template.fingers,
+        fingers: sanitizeFingers(template.rel.map(v => v < 0 ? -1 : v + fret), template.fingers),
         label: `${template.label}${fret === 0 ? "" : ` ${fret}F`}`,
         source: "movable"
       });
     }
   });
-  return uniqueShapes(shapes).sort((a, b) => shapeScore(a) - shapeScore(b));
+  return uniqueShapes(shapes
+    .map(shape => ({ ...shape, fingers: sanitizeFingers(shape.frets, shape.fingers) }))
+    .filter(shape => !hasImpossibleFingerStretch(shape)))
+    .sort((a, b) => shapeScore(a) - shapeScore(b));
 }
 
 function movableTemplates(type) {
@@ -722,9 +826,9 @@ function movableTemplates(type) {
     augMaj7: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 3, 1, 2, -1], fingers: [0, 1, 4, 2, 3, 0] }],
     m7b5: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 0, 1, -1], fingers: [0, 1, 2, 1, 3, 0] }],
     dim: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 2, 1, -1], fingers: [0, 1, 2, 4, 3, 0] }],
-    dim7: [{ label: "5弦ルート", rootString: 5, rel: [-1, 0, 1, 2, 1, -1], fingers: [0, 1, 2, 4, 3, 0] }],
+    dim7: [],
     aug: [
-      { label: "6弦ルート", rootString: 6, rel: [0, 3, 2, 1, 1, 0], fingers: [0, 4, 3, 1, 2, 0] },
+      { label: "6弦ルート", rootString: 6, rel: [0, 3, 2, 1, 1, 0], fingers: [1, 4, 3, 2, 2, 1] },
       { label: "5弦ルート", rootString: 5, rel: [-1, 0, 3, 2, 2, 1], fingers: [0, 1, 4, 2, 3, 1] }
     ],
     6: [
@@ -778,8 +882,46 @@ function halfDiminishedSixthRootShapes(root) {
 function dim7Shapes(root) {
   let fret = rootFret(root, 5);
   if (fret === 0) return [{ frets: [-1, 0, 1, 2, 1, 2], fingers: [0, 0, 1, 3, 2, 4], label: "5弦ルート dim7", source: "movable" }];
-  if (fret === 1 || fret === 2) fret += 3;
   return [{ frets: [-1, fret, fret + 1, fret - 1, fret + 1, -1], fingers: [0, 2, 3, 1, 4, 0], label: `5弦ルート ${fret}F`, source: "movable" }];
+}
+
+function sanitizeFingers(frets, fingers) {
+  return fingers.map((finger, index) => frets[index] > 0 ? finger : 0);
+}
+
+function verifiedShapes(root, type) {
+  const specs = VERIFIED_SHAPES[type]?.[root] || [];
+  return specs.map(([frets, fingers], index) => ({
+    frets: parseFretPattern(frets),
+    fingers: parseFingerPattern(fingers),
+    label: index === 0 ? "定番形" : "別形",
+    source: "verified"
+  }));
+}
+
+function parseFretPattern(pattern) {
+  return [...pattern].map(char => {
+    if (char === "x") return -1;
+    if (/[0-9]/.test(char)) return Number(char);
+    return char.toLowerCase().charCodeAt(0) - 87;
+  });
+}
+
+function parseFingerPattern(pattern) {
+  return [...pattern].map(char => Number(char) || 0);
+}
+
+function hasImpossibleFingerStretch(shape) {
+  const fretsByFinger = new Map();
+  shape.frets.forEach((fret, index) => {
+    const finger = shape.fingers[index] || 0;
+    if (finger > 0 && fret > 0) {
+      const frets = fretsByFinger.get(finger) || new Set();
+      frets.add(fret);
+      fretsByFinger.set(finger, frets);
+    }
+  });
+  return [...fretsByFinger.values()].some(frets => frets.size > 1);
 }
 
 function bestShape(root, type) {
@@ -797,8 +939,8 @@ function uniqueShapes(shapes) {
 }
 
 function shapeScore(shape) {
-  const openBonus = shape.source === "open" ? -20 : 0;
-  return openBonus + maxFret(shape) + minFret(shape) * .2 + shape.frets.filter(f => f < 0).length * 2;
+  const sourceBonus = shape.source === "verified" ? -30 : shape.source === "open" ? -20 : 0;
+  return sourceBonus + maxFret(shape) + minFret(shape) * .2 + shape.frets.filter(f => f < 0).length * 2;
 }
 
 function renderDiagram(shape, root, type, size, displayRoot = root) {
@@ -823,7 +965,10 @@ function renderDiagram(shape, root, type, size, displayRoot = root) {
   svg += `<rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="16" fill="${c.bg}" stroke="rgba(35,48,58,.1)"/>`;
   svg += `<text x="${left}" y="38" font-size="${isMini ? 20 : 28}" font-weight="900" fill="${c.text}">${displayName}</text>`;
   if (!isMini) svg += `<text x="${right - 90}" y="38" font-size="13" font-weight="800" fill="${c.muted}">${publicShapeLabel(shape)}</text>`;
-  if (start > 1) svg += `<text x="${left}" y="${bottom + 46}" font-size="13" fill="${c.muted}">${start}フレットから表示</text>`;
+  if (start > 1) {
+    svg += `<text x="${left}" y="${bottom + 47}" font-size="14" font-weight="900" fill="${c.accent}">${start}フレットから表示</text>`;
+    svg += `<text x="${left + 108}" y="${bottom + 47}" font-size="12" font-weight="700" fill="${c.muted}">1フレットではありません</text>`;
+  }
   for (let i = 0; i < 6; i++) {
     const y = bottom - i * stringGap;
     svg += `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="${c.stroke}" stroke-width="${i === 0 || i === 5 ? 2.6 : 1.8}" opacity=".55"/>`;
@@ -871,7 +1016,8 @@ function svgColors() {
     bg: s.getPropertyValue("--svg-bg").trim(),
     stroke: s.getPropertyValue("--svg-stroke").trim(),
     text: s.getPropertyValue("--svg-text").trim(),
-    muted: s.getPropertyValue("--svg-muted").trim()
+    muted: s.getPropertyValue("--svg-muted").trim(),
+    accent: s.getPropertyValue("--accent").trim()
   };
 }
 
@@ -917,16 +1063,10 @@ const TYPE_ALIASES = {
   "7": "7", "dom7": "7",
   "M7": "maj7", "maj7": "maj7", "Maj7": "maj7", "ma7": "maj7",
   "m7": "m7", "min7": "m7", "-7": "m7",
-  "mM7": "mMaj7", "mMaj7": "mMaj7", "minMaj7": "mMaj7",
   "m7b5": "m7b5", "m7-5": "m7b5", "min7b5": "m7b5",
   "dim": "dim",
   "dim7": "dim7",
   "aug": "aug", "+": "aug",
-  "augM7": "augMaj7", "augMaj7": "augMaj7", "+M7": "augMaj7",
-  "6": "6",
-  "m6": "m6", "min6": "m6",
-  "9": "9",
-  "m9": "m9", "min9": "m9",
   "sus2": "sus2",
   "sus4": "sus4", "sus": "sus4",
   "7sus4": "7sus4", "7sus": "7sus4",
@@ -940,7 +1080,7 @@ function parseChordName(raw) {
   const root = normalizeNote(formatRootToken(match[1] + match[2]));
   const suffix = match[3].replace(/[♭]/g, "b").replace(/[♯]/g, "#");
   const type = TYPE_ALIASES[suffix];
-  return root && type ? { root, type } : null;
+  return root && isActiveType(type) ? { root, type } : null;
 }
 
 function parseNotes(raw) {
@@ -1082,3 +1222,4 @@ function maxFret(shape) {
   const values = shape.frets.filter(f => f > 0);
   return values.length ? Math.max(...values) : 0;
 }
+
