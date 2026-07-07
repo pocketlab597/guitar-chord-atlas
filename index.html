@@ -32,6 +32,7 @@
         <a class="header-tab" href="#key" data-nav="key">ダイアトニック</a>
         <a class="header-tab" href="#identify" data-nav="identify">判定</a>
         <a class="header-tab" href="#stock" data-nav="stock">ストック<span class="tab-badge" data-stock-badge hidden></span></a>
+        <a class="header-tab" href="#memo" data-nav="memo">メモ<span class="tab-badge" data-memo-badge hidden></span></a>
       </nav>
 
       <button class="ghost-button header-clear" id="clearButton" type="button">クリア</button>
@@ -113,13 +114,27 @@
           <div class="finder-results" id="finderResults" aria-live="polite"></div>
         </div>
       </section>
-
       <section class="screen" id="stockScreen" aria-labelledby="stockTitle">
         <div class="pane-head">
           <h1 id="stockTitle" class="pane-title">ストック</h1>
           <p class="pane-hint">練習したいコードをためて、一画面で押さえ方を見比べられます。クリアで全部消せます。</p>
         </div>
         <div class="diatonic-grid" id="stockGrid"></div>
+      </section>
+
+      <section class="screen" id="memoScreen" aria-labelledby="memoTitle">
+        <div class="pane-head memo-head">
+          <div>
+            <h1 id="memoTitle" class="pane-title">気づきメモ</h1>
+            <p class="pane-hint">フォームの違和感や調査したいことを、見ているコード付きで保存できます。</p>
+          </div>
+          <div class="memo-toolbar" aria-label="メモ操作">
+            <button class="link-button" id="copyMemosButton" type="button">Codex用にコピー</button>
+            <button class="link-button" id="exportMemosButton" type="button">JSON保存</button>
+            <button class="link-button danger" id="clearMemosButton" type="button">全削除</button>
+          </div>
+        </div>
+        <div class="memo-list" id="memoList"></div>
       </section>
     </main>
 
@@ -136,9 +151,13 @@
       <a class="nav-item" href="#stock" data-nav="stock">
         <b>ストック</b><span class="tab-badge" data-stock-badge hidden></span>
       </a>
+      <a class="nav-item" href="#memo" data-nav="memo">
+        <b>メモ</b><span class="tab-badge" data-memo-badge hidden></span>
+      </a>
     </nav>
   </div>
 
   <script src="./src/app.js" defer></script>
 </body>
 </html>
+

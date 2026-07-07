@@ -35,6 +35,7 @@ const TYPE_GROUPS = [
 ];
 const RECENT_KEY = "chordAtlasPublicRecent";
 const STOCK_KEY = "chordAtlasPublicStock";
+const MEMO_KEY = "chordAtlasPublicMemos";
 
 const TYPES = {
   maj: { label: "メジャー", suffix: "", formula: ["R", "3", "5"], semis: [0, 4, 7], family: "明るく安定" },
@@ -318,10 +319,13 @@ function bindEvents() {
     clearStock();
     renderFinder();
   });
+  $("#copyMemosButton")?.addEventListener("click", event => copyMemosForCodex(event.currentTarget));
+  $("#exportMemosButton")?.addEventListener("click", exportMemosJson);
+  $("#clearMemosButton")?.addEventListener("click", clearMemos);
 }
 
 function setScreen(screen) {
-  const normalized = ["lookup", "key", "identify", "stock"].includes(screen) ? screen : "lookup";
+  const normalized = ["lookup", "key", "identify", "stock", "memo"].includes(screen) ? screen : "lookup";
   state.screen = normalized;
   document.querySelectorAll(".screen").forEach(section => section.classList.remove("active"));
   $(`#${normalized}Screen`)?.classList.add("active");
@@ -393,7 +397,9 @@ function renderAll() {
   renderDiatonic();
   renderFinder();
   renderStock();
+  renderMemos();
   updateStockBadge();
+  updateMemoBadge();
 }
 
 function renderLookup() {
@@ -418,7 +424,10 @@ function renderLookup() {
     return;
   }
   const top = resultTop(chordName(state.root, state.type), TYPES[state.type].family);
-  top.append(stockButton(state.root, state.type));
+  const actions = document.createElement("div");
+  actions.className = "result-actions";
+  actions.append(stockButton(state.root, state.type), memoButton());
+  top.append(actions);
   result.replaceChildren(
     top,
     diagramWrap(renderDiagram(shape, state.root, state.type, "large")),
@@ -439,6 +448,39 @@ function stockButton(root, type) {
   return button;
 }
 
+function memoButton() {
+  const button = document.createElement("button");
+  button.className = "stock-add memo-add";
+  button.type = "button";
+  button.textContent = "メモ";
+  button.addEventListener("click", addMemoForCurrent);
+  return button;
+}
+
+function addMemoForCurrent() {
+  const shapes = getChordShapes(state.root, state.type);
+  const shape = shapes[state.shapeIndex] || shapes[0];
+  if (!shape) return;
+  const title = chordName(state.root, state.type);
+  const defaultText = `${title} / ${publicShapeLabel(shape)}: `;
+  const note = window.prompt("このコードフォームについての気づきをメモ", defaultText);
+  if (!note || !note.trim()) return;
+  const memo = {
+    id: memoId(),
+    createdAt: new Date().toISOString(),
+    root: state.root,
+    type: state.type,
+    chord: title,
+    shapeIndex: state.shapeIndex,
+    shapeLabel: publicShapeLabel(shape),
+    frets: shape.frets,
+    page: "#lookup",
+    note: note.trim()
+  };
+  saveMemos([memo, ...readMemos()]);
+  renderMemos();
+  updateMemoBadge();
+}
 function renderDiatonic() {
   const grid = $("#diatonicList");
   grid.classList.toggle("hide-shapes", !state.keyShowShapes);
@@ -761,6 +803,167 @@ function renderStock() {
   }));
 }
 
+function readMemos() {
+  try {
+    const value = JSON.parse(localStorage.getItem(MEMO_KEY) || "[]");
+    return Array.isArray(value) ? value.filter(item => item && item.id && item.note) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMemos(list) {
+  localStorage.setItem(MEMO_KEY, JSON.stringify(list.slice(0, 100)));
+}
+
+function memoId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function updateMemoBadge() {
+  const count = readMemos().length;
+  document.querySelectorAll("[data-memo-badge]").forEach(badge => {
+    badge.textContent = count ? String(count) : "";
+    badge.hidden = count === 0;
+  });
+}
+
+function renderMemos() {
+  const list = $("#memoList");
+  if (!list) return;
+  const memos = readMemos();
+  if (!memos.length) {
+    list.classList.add("is-empty");
+    list.replaceChildren(empty("押さえ方の画面で「メモ」を押すと、今見ているコードとフォーム付きで気づきを保存できます。"));
+    return;
+  }
+  list.classList.remove("is-empty");
+  list.replaceChildren(...memos.map(memoCard));
+}
+
+function memoCard(item) {
+  const card = document.createElement("article");
+  card.className = "memo-card";
+
+  const head = document.createElement("div");
+  head.className = "memo-card-head";
+  const title = document.createElement("h2");
+  title.textContent = item.chord || chordName(item.root, item.type);
+  const remove = document.createElement("button");
+  remove.className = "dc-remove";
+  remove.type = "button";
+  remove.setAttribute("aria-label", `${title.textContent} のメモを削除`);
+  remove.textContent = "×";
+  remove.addEventListener("click", () => removeMemo(item.id));
+  head.append(title, remove);
+
+  const meta = document.createElement("div");
+  meta.className = "memo-meta";
+  meta.textContent = [item.shapeLabel, fretPatternText(item.frets), formatMemoDate(item.createdAt)].filter(Boolean).join(" / ");
+
+  const body = document.createElement("p");
+  body.className = "memo-note";
+  body.textContent = item.note;
+
+  const actions = document.createElement("div");
+  actions.className = "mini-actions";
+  const open = document.createElement("button");
+  open.className = "link-button";
+  open.type = "button";
+  open.textContent = "コードを見る";
+  open.addEventListener("click", () => openMemoChord(item));
+  actions.append(open);
+
+  card.append(head, meta, body, actions);
+  return card;
+}
+
+function removeMemo(id) {
+  saveMemos(readMemos().filter(item => item.id !== id));
+  renderMemos();
+  updateMemoBadge();
+}
+
+function clearMemos() {
+  const memos = readMemos();
+  if (!memos.length) return;
+  if (!window.confirm("メモをすべて削除しますか？")) return;
+  localStorage.removeItem(MEMO_KEY);
+  renderMemos();
+  updateMemoBadge();
+}
+
+function openMemoChord(item) {
+  location.hash = "lookup";
+  setChord(item.root, item.type, { scroll: true });
+  const shapes = getChordShapes(item.root, item.type);
+  state.shapeIndex = Math.min(item.shapeIndex || 0, Math.max(shapes.length - 1, 0));
+  renderLookup();
+}
+
+function memoMarkdown(memos = readMemos()) {
+  const lines = ["# Chord Atlas 気づきメモ", "", `Exported: ${new Date().toLocaleString("ja-JP")}`, ""];
+  memos.forEach((item, index) => {
+    lines.push(`## ${index + 1}. ${item.chord || chordName(item.root, item.type)}`);
+    lines.push(`- フォーム: ${item.shapeLabel || "未設定"}`);
+    lines.push(`- フレット: ${fretPatternText(item.frets) || "未設定"}`);
+    lines.push(`- 作成: ${formatMemoDate(item.createdAt) || "未設定"}`);
+    lines.push(`- メモ: ${item.note}`);
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+async function copyMemosForCodex(button) {
+  const memos = readMemos();
+  if (!memos.length) {
+    window.alert("コピーするメモがまだありません。");
+    return;
+  }
+  const text = memoMarkdown(memos);
+  try {
+    await navigator.clipboard.writeText(text);
+    flashButton(button, "コピーしました");
+  } catch {
+    window.prompt("コピーしてください", text);
+  }
+}
+
+function exportMemosJson() {
+  const memos = readMemos();
+  if (!memos.length) {
+    window.alert("保存するメモがまだありません。");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(memos, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "chord-atlas-memos.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function flashButton(button, text) {
+  if (!button) return;
+  const original = button.textContent;
+  button.textContent = text;
+  setTimeout(() => {
+    button.textContent = original;
+  }, 1400);
+}
+
+function fretPatternText(frets) {
+  return Array.isArray(frets) ? frets.map(fret => fret < 0 ? "x" : String(fret)).join("") : "";
+}
+
+function formatMemoDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
 function getChordShapes(root, type) {
   const shapes = [];
   const verified = verifiedShapes(root, type);
